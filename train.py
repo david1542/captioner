@@ -73,7 +73,7 @@ if __name__ == '__main__':
     parser.add_argument('--fold', type=int, required=True)
     parser.add_argument('--batch-size', type=int, default=16)
     parser.add_argument('--model', type=str, default='basic_decoder')
-    parser.add_argument('--gpus', type=str, default=0)
+    parser.add_argument('--gpus', type=int, default=0)
     parser.add_argument('--optimizer', type=str, default='adam')
     parser.add_argument('--optimizer-args', type=str, default='lr=1e-3')
 

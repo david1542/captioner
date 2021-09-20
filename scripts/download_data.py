@@ -7,7 +7,7 @@ import requests
 from zipfile import ZipFile
 from io import BytesIO
 
-from config.paths import DATA_PATH, FLICKER_TEXT_PATH, FLICKER_IMAGES_PATH, RAW_DATA_PATH
+from config.paths import DATA_PATH, FLICKER_TEXT_PATH, FLICKER_IMAGES_PATH, RAW_DATA_PATH, PROCESSED_DATA_PATH
 from config.urls import CAPTIONS_URL, IMAGES_URL
 
 
@@ -20,6 +20,8 @@ def download_zip(url: str, output_path: Path):
 def download_data(clean=False):
     if clean and os.path.exists(DATA_PATH):
         shutil.rmtree(DATA_PATH)
+        shutil.rmtree(PROCESSED_DATA_PATH)
+        os.mkdir(PROCESSED_DATA_PATH)
 
     download_zip(CAPTIONS_URL, FLICKER_TEXT_PATH)
     download_zip(IMAGES_URL, RAW_DATA_PATH)
