@@ -1,0 +1,1 @@
+scp -r ubuntu@MLMachine:/home/ubuntu/projects/captioner/lightning_logs/ .
