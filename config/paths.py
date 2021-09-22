@@ -4,6 +4,8 @@ BASE_PATH = os.path.dirname(os.path.realpath(__file__))
 DATA_PATH = os.path.join(BASE_PATH, '../data')
 SCRIPTS_PATH = os.path.join(BASE_PATH, '../scripts')
 
+LOGS_PATH = os.path.join(BASE_PATH, '../lightning_logs')
+
 RAW_DATA_PATH = os.path.join(DATA_PATH, 'raw')
 PROCESSED_DATA_PATH = os.path.join(DATA_PATH, 'processed')
 

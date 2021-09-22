@@ -44,14 +44,15 @@ class Collector:
         embedding_size = len(batch[0][0])
         embeddings = torch.zeros(len(batch), embedding_size)
         batch_tokens = []
-
+        image_ids = []
         for i, t in enumerate(batch):
-            embedding, caption = t
+            embedding, caption, image_id = t
             embeddings[i] = embedding
             batch_tokens.append(caption)
+            image_ids.append(image_id)
         batch_tokens = self.vocabulary.to_matrix(batch_tokens)
 
-        return embeddings, batch_tokens
+        return embeddings, batch_tokens, image_ids
 
 
 class CaptionsDataset(data.Dataset):
@@ -68,7 +69,7 @@ class CaptionsDataset(data.Dataset):
 
         caption = row['caption']
         embedding = self.image_embeddings.get_embedding(image_id=image_id).flatten()
-        return embedding, caption
+        return embedding, caption, image_id
 
     def get_embedding_size(self):
         return self.image_embeddings.get_embedding_size()

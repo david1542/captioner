@@ -2,23 +2,25 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from models.collection.base_module import BaseModule
 from models.device import device
 
 
-class BasicDecoder(nn.Module):
-    def __init__(self, vocabulary, emb_size=64, hid_size=128):
+class BasicDecoder(BaseModule):
+    def __init__(self, vocabulary, learning_rate=1e-3, hidden_size=64, image_emb_size=128):
         super().__init__()
         self.inp_voc = vocabulary
-        self.emb_out = nn.Embedding(len(self.inp_voc), emb_size)
+        self.learning_rate = learning_rate
 
-        self.dec0 = nn.GRUCell(emb_size, hid_size)
-        self.logits = nn.Linear(hid_size, len(self.inp_voc))
+        self.emb_out = nn.Embedding(len(self.inp_voc), hidden_size)
+        self.dec0 = nn.GRUCell(hidden_size, image_emb_size)
+        self.logits = nn.Linear(image_emb_size, len(self.inp_voc))
 
-    def forward(self, embeddings, captions):
+    def forward(self, embeddings, captions, image_ids):
         """ Apply model in training mode """
         return self.decode(embeddings, captions)
 
-    def decode(self, initial_state, out_tokens, **flags):
+    def decode(self, initial_state, out_tokens):
         """ Iterate over reference tokens (out_tokens) with decode_step """
         batch_size = out_tokens.shape[0]
         state = initial_state
@@ -70,9 +72,12 @@ class BasicDecoder(nn.Module):
         return self.inp_voc.to_lines(out_ids.cpu().numpy()), states
 
     def compute_loss(self, batch):
-        embeddings, captions = batch
+        embeddings, captions, _ = batch
         outputs = self(embeddings, captions)
         outputs = outputs.view(-1, len(self.inp_voc))
         captions = captions.view(-1)
 
         return F.cross_entropy(outputs, captions)
+
+    def configure_optimizer(self):
+        return torch.optim.Adam(self.parameters(), lr=1e-3)
