@@ -35,8 +35,17 @@ def load_captions(lemmatized=False):
 
 
 def preprocess_captions(captions: pd.DataFrame):
+    # Lowercase all the strings
     captions.loc[:, 'caption'] = captions['caption'].str.lower()
+    # Remove punctuation
     captions.loc[:, 'caption'] = captions['caption'].str.replace('[{}]'.format(string.punctuation), '')
+    # Remove single words
+    captions.loc[:, 'caption'] = captions['caption'].str.replace(r'\b\w\b','').str.replace(r'\s+', ' ')  # Remove single words
+    # Remove all numbers
+    captions.loc[:, 'caption'] = captions['caption'].str.replace('\d+', '')
+    # Transform multiple(consecutive) spaces to a single space
+    captions.loc[:, 'caption'] = captions['caption'].str.replace(' +', ' ')
+
     return captions
 
 

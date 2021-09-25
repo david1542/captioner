@@ -29,7 +29,7 @@ class Vocabulary:
         tokens = sorted(set(flat_lines))
         tokens = [t for t in tokens if t not in (bos, eos, unk) and len(t)]
         tokens = [bos, eos, unk] + tokens
-        return Vocab(tokens, bos, eos, unk)
+        return Vocabulary(tokens, bos, eos, unk)
 
     def tokenize(self, string):
         """converts string to a list of tokens"""

@@ -21,7 +21,7 @@ def train_model(args: argparse.Namespace):
 
     # Create the model
     model_cls = models[args.model]
-    model = model_cls(vocabulary=vocabulary, hid_size=embedding_size,
+    model = model_cls(vocabulary=vocabulary, image_emb_size=embedding_size,
                       learning_rate=args.learning_rate)
 
     # Set random seed
@@ -31,13 +31,11 @@ def train_model(args: argparse.Namespace):
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.fit(model, datamodule=datamodule)
 
-    if not args.debug:
+    if args.fast_dev_run is None:
         trainer.test(datamodule=datamodule)
 
 
 if __name__ == '__main__':
-    task = Task.init(project_name=PROJECT_NAME, task_name="basic decoder")
-
     parser = argparse.ArgumentParser()
     parser = pl.Trainer.add_argparse_args(parser)
 
@@ -45,6 +43,11 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int, default=16)
     parser.add_argument('--model', type=str, default='basic_decoder')
     parser.add_argument('--learning-rate', type=str, default='1e-3')
+    parser.add_argument('--task-name', type=str, required=True)
+    parser.add_argument('--disable-clearml', action='store_true')
 
     args = parser.parse_args()
+    if not args.disable_clearml:
+        task = Task.init(project_name=PROJECT_NAME, task_name=args.task_name)
+
     train_model(args)

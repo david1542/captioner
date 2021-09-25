@@ -1,6 +1,7 @@
 import os
-from typing import Optional
+from typing import Optional, Dict
 
+import numpy as np
 import pandas as pd
 import torch
 from torch.utils import data
@@ -64,7 +65,7 @@ class CaptionsDataset(data.Dataset):
         return len(self.captions)
 
     def __getitem__(self, index):
-        row = self.captions.loc[index]
+        row = self.captions.iloc[index]
         image_id = row['image_id']
 
         caption = row['caption']
@@ -82,8 +83,10 @@ class CaptionsDataModule(pl.LightningDataModule):
         self.fold = fold
         self.datasets = {}
 
+        self.collector = Collector(vocabulary=vocabulary)
         self.vocabulary = vocabulary
-        self.collector = Collector(vocabulary=self.vocabulary)
+
+        self.reference = None
 
     def setup(self, stage: Optional[str] = None) -> None:
         if self.fold is None:
@@ -103,9 +106,17 @@ class CaptionsDataModule(pl.LightningDataModule):
             set_captions = captions[captions['image_id'].isin(set_image_ids)].reset_index(drop=True)
             self.datasets[set_name] = CaptionsDataset(captions=set_captions)
 
-    def train_dataloader(self) -> DataLoader:
-        return data.DataLoader(dataset=self.datasets['train'], batch_size=self.batch_size,
-                               shuffle=True, collate_fn=self.collector.collect)
+        # Set reference sample
+        random_image_id = np.random.choice(images_ids['valid'])
+        ref_captions = captions[captions['image_id'] == random_image_id]
+        self.datasets['ref'] = CaptionsDataset(captions=ref_captions)
+
+    def train_dataloader(self) -> Dict[str, DataLoader]:
+        ref_dataloader = data.DataLoader(dataset=self.datasets['ref'], batch_size=1,
+                                         collate_fn=self.collector.collect)
+        train_dataloader = data.DataLoader(dataset=self.datasets['train'], batch_size=self.batch_size,
+                                           shuffle=True, collate_fn=self.collector.collect)
+        return {'train': train_dataloader, 'ref': ref_dataloader}
 
     def val_dataloader(self) -> DataLoader:
         return data.DataLoader(dataset=self.datasets['valid'], batch_size=self.batch_size,
