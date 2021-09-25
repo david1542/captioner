@@ -32,6 +32,9 @@ def evaluate_on_image(model: LightningModule, sample, vocabulary, max_length=20)
     embedding = embedding.unsqueeze(0)
     caption = caption.unsqueeze(0)
 
+    # Turn on evaluate mode
+    model.eval()
+
     predicted_caption = model.predict(embedding, max_length=max_length)[0]
     actual_caption = vocabulary.to_lines(caption.cpu().numpy())[0]
 
