@@ -4,19 +4,32 @@ import torch.nn.functional as F
 
 from models.collection.base_module import BaseModule
 from models.device import device
+from utils.data import get_embedding_size
+
+base_config = {
+    'dropout_input_rate': 0.5,
+    'dropout_hidden_rate': 0.2,
+    'hidden_size': 64,
+}
 
 
 class BasicDecoder(BaseModule):
-    def __init__(self, vocabulary, learning_rate=1e-3, hidden_size=64, image_emb_size=128):
-        super().__init__(vocabulary)
-        self.learning_rate = learning_rate
+    def __init__(self, vocabulary, *args, **kwargs):
+        super().__init__(vocabulary, *args, **kwargs)
+        self.learning_rate = kwargs['learning_rate']
+        self.image_emb_size = get_embedding_size()
 
-        self.emb_out = nn.Embedding(len(self.vocabulary), hidden_size)
-        self.dec0 = nn.GRUCell(hidden_size, image_emb_size)
-        self.logits = nn.Linear(image_emb_size, len(self.vocabulary))
+        self.emb_out = nn.Embedding(len(self.vocabulary), kwargs['hidden_size'])
+
+        self.dropout_input = nn.Dropout(p=kwargs['dropout_input_rate'])
+        self.dropout_hidden = nn.Dropout(p=kwargs['dropout_hidden_rate'])
+
+        self.dec0 = nn.GRUCell(kwargs['hidden_size'], self.image_emb_size)
+        self.logits = nn.Linear(self.image_emb_size, len(self.vocabulary))
 
     def forward(self, embeddings, captions):
         """ Apply model in training mode """
+        embeddings = self.dropout_input(embeddings)
         return self.decode(embeddings, captions)
 
     def decode(self, initial_state, out_tokens):
@@ -43,9 +56,10 @@ class BasicDecoder(BaseModule):
         :return: a list of next decoder state tensors, a tensor of logits [batch, len(inp_voc)]
         """
         embedded_tokens = self.emb_out(prev_tokens)  # batch_size X emb_size
+        embedded_tokens = self.dropout_hidden(embedded_tokens)
+
         new_dec_state = self.dec0(embedded_tokens, prev_state)
         output_logits = self.logits(new_dec_state)
-
         return new_dec_state, output_logits
 
     def decode_inference(self, initial_state, max_length):
@@ -78,4 +92,22 @@ class BasicDecoder(BaseModule):
         return F.cross_entropy(outputs, captions)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=1e-3)
+        return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
+
+    @staticmethod
+    def add_arguments(parser):
+        parser = super(BasicDecoder, BasicDecoder).add_arguments(parser)
+        parser.add_argument('--drop-input-rate', type=float)
+        parser.add_argument('--drop-hidden-rate', type=float)
+        return parser
+
+    @classmethod
+    def get_config_from_args(cls, args):
+        base_args_keys = list(base_config.keys())
+        parent_config = super().get_config_from_args(args)
+        config = {**parent_config, **base_config}
+        for key in base_args_keys:
+            if key in args:
+                config[key] = args[key]
+        return config
+

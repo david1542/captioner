@@ -4,8 +4,7 @@ import pytorch_lightning as pl
 from clearml import Task
 
 from config.general import PL_RANDOM_SEED, PROJECT_NAME
-from models.dispatcher import models
-from utils.data import get_embedding_size
+from models import dispatcher
 from utils.datasets import CaptionsDataModule
 from utils.vocab import get_vocabulary
 
@@ -16,13 +15,9 @@ def train_model(args: argparse.Namespace):
     datamodule = CaptionsDataModule(fold=args.fold, vocabulary=vocabulary,
                                     batch_size=args.batch_size)
 
-    # Get image embedding size
-    embedding_size = get_embedding_size()
-
     # Create the model
-    model_cls = models[args.model]
-    model = model_cls(vocabulary=vocabulary, image_emb_size=embedding_size,
-                      learning_rate=args.learning_rate)
+    model_cls = dispatcher.models[args.model]
+    model = model_cls.from_arguments(vocabulary=vocabulary, args=vars(args))
 
     # Set random seed
     pl.seed_everything(PL_RANDOM_SEED)
@@ -38,12 +33,12 @@ def train_model(args: argparse.Namespace):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser = pl.Trainer.add_argparse_args(parser)
+    parser = dispatcher.add_arguments_of_models(parser)
 
     parser.add_argument('--fold', type=int, required=True)
     parser.add_argument('--batch-size', type=int, default=16)
-    parser.add_argument('--model', type=str, default='basic_decoder')
-    parser.add_argument('--learning-rate', type=str, default='1e-3')
     parser.add_argument('--task-name', type=str, required=True)
+    parser.add_argument('--model', type=str, default='basic_decoder')
     parser.add_argument('--disable-clearml', action='store_true')
 
     args = parser.parse_args()

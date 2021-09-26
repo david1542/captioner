@@ -1,13 +1,21 @@
 import pytorch_lightning as pl
 from utils.evaluate import evaluate_model, evaluate_on_image
 
+base_config = {
+    'eval_image_rate': 100,
+    'eval_max_length': 25,
+    'learning_rate': 1e-3,
+    'image_emb_size': 128
+}
+
 
 class BaseModule(pl.LightningModule):
-    def __init__(self, vocabulary, eval_image_rate=100, eval_max_length=25):
+    def __init__(self, vocabulary, *args, **kwargs):
         super().__init__()
         self.vocabulary = vocabulary
-        self.eval_max_length = eval_max_length
-        self.eval_image_rate = eval_image_rate
+        self.eval_max_length = kwargs['eval_max_length']
+        self.eval_image_rate = kwargs['eval_image_rate']
+        self.learning_rate = kwargs['learning_rate']
 
     def training_step(self, batch, *args):
         loss = self._calculate_loss('train', batch['train'], check_bleu_metrics=False)
@@ -45,3 +53,24 @@ class BaseModule(pl.LightningModule):
 
         # Forward the sample to the evaluate_on_image method
         evaluate_on_image(self, sample, self.vocabulary, self.eval_max_length)
+
+    @staticmethod
+    def add_arguments(parser):
+        for key, value in base_config.items():
+            arg_name = f"--{key.replace('_', '-')}"
+            parser.add_argument(arg_name, type=type(value), default=value)
+        return parser
+
+    @classmethod
+    def get_config_from_args(cls, args):
+        base_args_keys = list(base_config.keys())
+        config = {**base_config}
+        for key in base_args_keys:
+            if key in args:
+                config[key] = args[key]
+        return config
+
+    @classmethod
+    def from_arguments(cls, vocabulary, args):
+        config = cls.get_config_from_args(args)
+        return cls(vocabulary=vocabulary, **config)
